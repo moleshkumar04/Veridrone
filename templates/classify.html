@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Classify Images - VeriDrone</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            background:
+                linear-gradient(rgba(0, 61, 113, 0.65), rgba(0, 61, 113, 0.65)),
+                url("{{ url_for('static', filename='classifybg.png') }}") no-repeat center center fixed;
+            background-size: cover;
+            color: #E8F8FF;
+            overflow-x: hidden;
+            opacity: 0;
+            transform: translateY(25px);
+            animation: fadeInPage 0.9s ease forwards;
+        }
+
+        @keyframes fadeInPage {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        button, a {
+            transition: 0.3s ease;
+        }
+
+        button:active, .email-btn:active, .sidebar a:active {
+            transform: scale(0.93);
+        }
+
+        .sidebar {
+            width: 240px;
+            background: rgba(10, 25, 47, 0.97);
+            padding: 28px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            border-right: 2px solid rgba(255,255,255,0.2);
+            min-height: 100vh;
+            position: sticky;
+            top: 0;
+            opacity: 0;
+            transform: translateX(-30px);
+            animation: sidebarSlide 0.8s ease forwards 0.2s;
+        }
+
+        @keyframes sidebarSlide {
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .sidebar a {
+            text-decoration: none;
+            color: white;
+            background: rgba(69, 123, 157, 0.85);
+            padding: 14px 18px;
+            border-radius: 14px;
+            font-weight: 600;
+            transition: 0.3s ease, transform 0.3s;
+            text-align: center;
+        }
+
+        .sidebar a:hover {
+            background: #deb887;
+            color: #0D1B2A;
+            transform: translateY(-4px) scale(1.03);
+        }
+
+        .logout-btn {
+            margin-top: auto;
+        }
+
+        .content {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .classify-container {
+            width: 100%;
+            max-width: 1050px;
+            background: rgba(0, 48, 90, 0.55);
+            border: 2px solid rgba(255,255,255,0.25);
+            padding: 40px 50px;
+            border-radius: 25px;
+            backdrop-filter: blur(14px);
+            opacity: 0;
+            transform: translateY(35px);
+            animation: smoothBox 0.9s ease forwards 0.45s;
+        }
+
+        @keyframes smoothBox {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1, h2 {
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+
+        .tab-button {
+            padding: 12px 25px;
+            border-radius: 15px;
+            border: 2px solid transparent;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s ease;
+        }
+
+        .tab-button.active {
+            background: #0D1B2A;
+            border-color: #A8D5FF;
+            color: #A8D5FF;
+            transform: scale(1.1);
+        }
+
+        .tab-button:hover {
+            background: #deb887;
+            color: #0D1B2A;
+            transform: scale(1.06);
+        }
+
+        .tab-content {
+            display: none;
+            opacity: 0;
+            transform: translateY(15px) scale(0.98);
+            transition: 0.45s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .image-list {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .image-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.12);
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            transition: 0.3s ease;
+        }
+
+        .image-item:hover {
+            transform: scale(1.03);
+            background: rgba(255,255,255,0.18);
+        }
+
+        .image-item button {
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            background: #0D1B2A;
+            border: 2px solid #A8D5FF;
+            color: #A8D5FF;
+            font-weight: 600;
+            transition: 0.3s ease;
+        }
+
+        .image-item button:hover {
+            background: #deb887;
+            color: black;
+            transform: scale(1.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: rgba(255,255,255,0.10);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 14px 10px;
+            text-align: center;
+            transition: 0.3s ease;
+        }
+
+        th {
+            background: rgba(0,0,0,0.4);
+            font-size: 15px;
+            color: #A8D5FF;
+        }
+
+        tr:nth-child(even) {
+            background: rgba(255,255,255,0.07);
+        }
+
+        tr:hover {
+            background: rgba(255,255,255,0.16);
+            transform: scale(1.01);
+        }
+
+        .classified-img {
+            width: 85px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 2px solid #A8D5FF;
+        }
+
+        .email-btn {
+            padding: 10px 20px;
+            display: inline-block;
+            background: linear-gradient(140deg, #00B4FF, #0077CC);
+            border-radius: 25px;
+            color: white;
+            font-weight: 700;
+            text-decoration: none;
+            transition: 0.3s ease;
+        }
+
+        .email-btn:hover {
+            background: #deb887;
+            color: #0D1B2A;
+            transform: scale(1.07);
+        }
+
+        .no-data {
+            text-align: center;
+            margin-top: 20px;
+            opacity: 0.8;
+        }
+
+        @media(max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                gap: 10px;
+                padding: 15px;
+                justify-content: center;
+                border-bottom: 2px solid rgba(255,255,255,0.25);
+                border-right: none;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <a href="{{ url_for('upload') }}">📤 Upload</a>
+        <a href="{{ url_for('classify') }}">🔍 Classify</a>
+        <a href="{{ url_for('reports') }}">📊 Reports</a>
+        <a href="{{ url_for('login') }}" class="logout-btn">🚪 Logout</a>
+    </div>
+
+    <div class="content">
+
+        <div class="classify-container">
+
+            <h1>Classify Images</h1>
+
+            <div class="tabs">
+                <button class="tab-button active" onclick="openTab(event,'new')">🆕 New Images</button>
+                <button class="tab-button" onclick="openTab(event,'classified')">✅ Classified Images</button>
+            </div>
+
+            <div id="new" class="tab-content active">
+                <h2>New Images</h2>
+
+                {% if new_images %}
+                <ul class="image-list">
+                    {% for image in new_images %}
+                    <li class="image-item">
+                        <span>{{ image["Image Name"] }}</span>
+                        <form method="POST" action="{{ url_for('classify_image', image_name=image['Image Name']) }}">
+                            <button type="submit">🔍 Classify</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                    <p class="no-data">🚫 No new images to classify.</p>
+                {% endif %}
+            </div>
+
+            <div id="classified" class="tab-content">
+                <h2>Classified Images</h2>
+
+                {% if classified_images %}
+                <table>
+                    <tr>
+                        <th>Image Name</th>
+                        <th>Date</th>
+                        <th>Persons</th>
+                        <th>Missing Hardhat</th>
+                        <th>Missing PPE</th>
+                        <th>Image</th>
+                        <th>Email</th>
+                    </tr>
+
+                    {% for image in classified_images %}
+                    <tr>
+                        <td>{{ image["Image Name"] }}</td>
+                        <td>{{ image["Uploaded Date"] }}</td>
+                        <td>{{ image["Number of Persons"] }}</td>
+                        <td>{{ image["Missing Hardhat"] }}</td>
+                        <td>{{ image["Missing PPE"] }}</td>
+                        <td><img src="{{ image['Classified Image'] }}" class="classified-img"></td>
+                        <td><a class="email-btn" href="{{ url_for('send_email', image_name=image['Image Name']) }}">Send</a></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                    <p class="no-data">🚫 No classified images available.</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+<script>
+function openTab(event, tabId) {
+    document.querySelectorAll(".tab-content").forEach(content => {
+        content.classList.remove("active");
+    });
+
+    document.querySelectorAll(".tab-button").forEach(btn => {
+        btn.classList.remove("active");
+    });
+
+    const activeTab = document.getElementById(tabId);
+    activeTab.classList.add("active");
+
+    activeTab.style.opacity = "0";
+    activeTab.style.transform = "translateY(18px) scale(0.97)";
+
+    setTimeout(() => {
+        activeTab.style.opacity = "1";
+        activeTab.style.transform = "translateY(0) scale(1)";
+    }, 20);
+
+    event.currentTarget.classList.add("active");
+}
+</script>
+
+</body>
+</html>

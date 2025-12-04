@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Image - VeriDrone</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            background: url("{{ url_for('static', filename='uploadbg.png') }}") no-repeat center center fixed;
+            background-size: cover;
+            color: #1d3557;
+            overflow: hidden;
+            animation: fadeInBody 1s ease forwards;
+        }
+
+        @keyframes fadeInBody {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .sidebar {
+            width: 220px;
+            background: rgba(29, 53, 87, 0.95);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            border-right: 2px solid #457b9d;
+            min-height: 100vh;
+            backdrop-filter: blur(8px);
+        }
+
+        .sidebar a {
+            text-decoration: none;
+            color: white;
+            background: rgba(69, 123, 157, 0.75);
+            padding: 14px 18px;
+            border-radius: 16px;
+            transition: 0.3s ease;
+            font-weight: 600;
+        }
+
+        .sidebar a:hover {
+            background: #deb887;
+            color: #1d3557;
+            transform: translateY(-3px) scale(1.05);
+        }
+
+        .logout-btn {
+            margin-top: auto;
+            background: rgba(69, 123, 157, 0.75) !important;
+            color: white !important;
+        }
+
+        .logout-btn:hover {
+            background: #deb887 !important;
+            color: #1d3557 !important;
+            transform: translateY(-3px) scale(1.05);
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding-right: 50px;
+        }
+
+        .upload-container {
+            background: rgba(69, 123, 157, 0.45);
+            backdrop-filter: blur(14px);
+            padding: 50px 35px;
+            border-radius: 28px;
+            border: 2px solid rgba(255,255,255,0.25);
+            width: 100%;
+            max-width: 470px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .upload-container h1 {
+            color: white;
+            font-size: 32px;
+            margin-bottom: 30px;
+        }
+
+        .upload-box {
+            width: 100%;
+            padding: 38px;
+            border: 2px dashed rgba(255,255,255,0.9);
+            border-radius: 20px;
+            background: rgba(255,255,255,0.12);
+            text-align: center;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: 0.35s ease;
+            position: relative;
+        }
+
+        .upload-box:hover {
+            border-color: #deb887;
+            color: #deb887;
+        }
+
+        .slider-container {
+            width: 100%;
+            display: none;
+            position: relative;
+            margin-top: 15px;
+        }
+
+        .slider-image {
+            width: 100%;
+            max-height: 260px;
+            object-fit: contain;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .slider-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.4);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .prev-btn { left: 10px; }
+        .next-btn { right: 10px; }
+
+        .upload-btn, .back-btn {
+            padding: 14px 25px;
+            width: 170px;
+            border-radius: 25px;
+            border: none;
+            background: #1d3557;
+            color: white;
+            margin-top: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.35s ease;
+        }
+
+        .upload-btn:hover, .back-btn:hover {
+            background: #deb887;
+            color: #1d3557;
+        }
+
+        .success-message {
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(46, 204, 113, 0.95);
+            color: white;
+            width: 100%;
+            text-align: center;
+            border-radius: 10px;
+            font-weight: 600;
+            animation: fadeIn 0.6s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <a href="{{ url_for('upload') }}">📤 Upload</a>
+        <a href="{{ url_for('classify') }}">🔍 Classify</a>
+        <a href="{{ url_for('login') }}" class="logout-btn">🚪 Logout</a>
+    </div>
+
+    <div class="content">
+
+        <div class="upload-container">
+            <h1>Upload Your Image</h1>
+
+            <label class="upload-box" id="uploadLabel">
+                <input type="file" name="image" id="imageInput" form="uploadForm" required hidden multiple>
+                <span id="uploadText">📁 Choose Images</span>
+            </label>
+
+            <div class="slider-container" id="sliderContainer">
+                <button class="slider-btn prev-btn" onclick="prevImage()">⟨</button>
+                <img id="sliderImage" class="slider-image">
+                <button class="slider-btn next-btn" onclick="nextImage()">⟩</button>
+            </div>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="success-message">{{ messages[0] }}</div>
+                {% endif %}
+            {% endwith %}
+
+            <form id="uploadForm" method="POST" enctype="multipart/form-data" onsubmit="showSuccess()">
+                <button type="submit" class="upload-btn">⬆ Upload</button>
+            </form>
+
+            <button class="back-btn" onclick="window.location.href='{{ url_for('dashboard') }}'">⬅ Back</button>
+
+        </div>
+
+    </div>
+
+    <script>
+        const imageInput = document.getElementById("imageInput");
+        const sliderContainer = document.getElementById("sliderContainer");
+        const uploadText = document.getElementById("uploadText");
+
+        let currentIndex = 0;
+        let images = [];
+
+        imageInput.addEventListener("change", function() {
+            images = Array.from(this.files);
+            if (images.length === 0) return;
+            sliderContainer.style.display = "block";
+            const sliderImage = document.getElementById("sliderImage");
+            sliderImage.style.display = "block";
+            uploadText.textContent = images.length + " image(s) selected";
+            showImage(0);
+        });
+
+        function showImage(index) {
+            const sliderImage = document.getElementById("sliderImage");
+            sliderImage.src = URL.createObjectURL(images[index]);
+        }
+
+        function nextImage() {
+            currentIndex = (currentIndex + 1) % images.length;
+            showImage(currentIndex);
+        }
+
+        function prevImage() {
+            currentIndex = (currentIndex - 1 + images.length) % images.length;
+            showImage(currentIndex);
+        }
+
+        function showSuccess() {
+            setTimeout(() => {
+                const msg = document.createElement("div");
+                msg.className = "success-message";
+                msg.textContent = "✔ Image uploaded successfully!";
+                document.querySelector(".upload-container").appendChild(msg);
+            }, 300);
+        }
+    </script>
+
+</body>
+</html>
